@@ -13,7 +13,7 @@ import org.hibernate.annotations.Type;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "devices")
+@Table(name = "devicesOld")
 public class DeviceOld {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)

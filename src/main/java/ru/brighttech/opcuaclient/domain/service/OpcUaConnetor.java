@@ -95,13 +95,13 @@ public class OpcUaConnetor {
                     System.out.println("Value: " + value);
                     System.out.println("------------------------------------");
 
-                    deviceRepo.save(new DeviceOld(
-                                                    null,
-                                                    nodeId.toParseableString(),
-                                                    "something",
-                                                    value.getValue().toString()
-                                            )
-                    );
+//                    deviceRepo.save(new DeviceOld(
+//                                                    null,
+//                                                    nodeId.toParseableString(),
+//                                                    "something",
+//                                                    value.getValue().toString()
+//                                            )
+//                    );
                 }
             }
         });
