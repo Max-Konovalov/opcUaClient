@@ -1,5 +1,6 @@
 package ru.brighttech.opcuaclient.domain.service;
 
+import lombok.Data;
 import org.eclipse.milo.opcua.sdk.client.AddressSpace;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
@@ -12,11 +13,19 @@ import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
+import org.eclipse.milo.opcua.stack.core.types.structured.ReadResponse;
+import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
 import org.springframework.stereotype.Component;
 import ru.brighttech.opcuaclient.domain.persistence.entity.DeviceOld;
 import ru.brighttech.opcuaclient.domain.persistence.repository.DeviceRepo;
+import ru.brighttech.opcuaclient.web.payload.DataRequest;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @Component
@@ -106,4 +115,38 @@ public class OpcUaConnetor {
             }
         });
     }
+
+
+
+    public void myConnector(int namespace, List<String> data) throws Exception {
+
+        String endpointUrl = "opc.tcp://10.103.36.28:4840";
+        OpcUaClient client = OpcUaClient.create(
+                endpointUrl,
+                endpoints ->
+                        endpoints.stream()
+                                .filter(e -> e.getSecurityPolicyUri().equals(SecurityPolicy.None.getUri()))
+                                .findFirst(),
+                OpcUaClientConfigBuilder::build
+        );
+        client.connect().get();
+
+        System.out.println("connected");
+
+        List<NodeId> nodeIdList = new ArrayList<>();
+
+        data.forEach( x -> nodeIdList.add(new NodeId(namespace, x)));
+
+        System.out.println(nodeIdList);
+//
+
+        List<ReadValueId> nodesToRead = new ArrayList<>();
+        nodeIdList.forEach( x -> nodesToRead.add(new ReadValueId(x, AttributeId.Value.uid(), null, null)));
+        CompletableFuture<ReadResponse> completableFuture = client.read(0, TimestampsToReturn.Server, nodesToRead);
+        ReadResponse future = completableFuture.get();
+        System.out.println("_____\n");
+        Arrays.stream(Arrays.stream(future.getResults()).toArray()).toList().forEach(System.out::println);
+
+    }
+
 }
