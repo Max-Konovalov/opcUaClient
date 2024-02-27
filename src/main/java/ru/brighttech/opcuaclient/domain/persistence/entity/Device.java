@@ -7,6 +7,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.Map;
 
 
 @Getter
@@ -39,5 +43,12 @@ public class Device {
     private Territory territory;
 
     private boolean isDeactivated;
+
+    @Column(name = "is_deactivated", nullable = false)
+    private Boolean isDeactivated1 = false;
+
+    @Column(name = "data")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> data;
 
 }

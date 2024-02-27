@@ -17,18 +17,25 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadResponse;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import ru.brighttech.opcuaclient.domain.persistence.entity.Device;
 import ru.brighttech.opcuaclient.domain.persistence.entity.DeviceData;
 import ru.brighttech.opcuaclient.domain.persistence.repository.DeviceDataRepo;
 import ru.brighttech.opcuaclient.domain.persistence.repository.DeviceRepo;
+
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @Component
 @RequiredArgsConstructor
+@EnableScheduling
 public class OpcUaConnetor {
 
     private final DeviceRepo deviceRepo;
@@ -115,9 +122,16 @@ public class OpcUaConnetor {
     }
 
 
+    @Scheduled(fixedRate = 5000)
+    public void myConnector() throws Exception {
+        Device device = deviceRepo.findById(3).get();
+        Map<String, Object> deviceData = device.getData();
+        List<String> data = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : deviceData.entrySet()) {
+            data.add(entry.getValue().toString());
+        }
 
-    public void myConnector(int namespace, List<String> data) throws Exception {
-
+        int namespace = 3;
         String endpointUrl = "opc.tcp://10.103.36.28:4840";
         OpcUaClient client = OpcUaClient.create(
                 endpointUrl,
@@ -145,6 +159,10 @@ public class OpcUaConnetor {
                 null,
                 null
         )));
+        saveDataToDatabase(data, client, nodesToRead);
+    }
+
+    private void saveDataToDatabase(List<String> data, OpcUaClient client, List<ReadValueId> nodesToRead) throws InterruptedException, ExecutionException {
         CompletableFuture<ReadResponse> completableFuture = client.read(
                 0,
                 TimestampsToReturn.Server,
@@ -183,6 +201,7 @@ public class OpcUaConnetor {
                 device,
                 forDb
                 ));
+        client.disconnect();
     }
 
 }
