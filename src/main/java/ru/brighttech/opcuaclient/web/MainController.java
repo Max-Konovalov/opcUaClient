@@ -35,22 +35,22 @@ public class MainController {
         private String address;
     }
 
-    @PostMapping("/json")
-    public void json(@RequestBody ListDto<DeviceRequest> request) {
-        deviceRepo.saveAll(
-                request.getData()
-                        .stream()
-                        .map(
-                                i -> new DeviceOld(
-                                        null,
-                                        "example_name",
-                                        i.getIp(),
-                                        ""
-                                )
-                        )
-                        .collect(Collectors.toList())
-        );
-    }
+//    @PostMapping("/json")
+//    public void json(@RequestBody ListDto<DeviceRequest> request) {
+//        deviceRepo.saveAll(
+//                request.getData()
+//                        .stream()
+//                        .map(
+//                                i -> new DeviceOld(
+//                                        null,
+//                                        "example_name",
+//                                        i.getIp(),
+//                                        ""
+//                                )
+//                        )
+//                        .collect(Collectors.toList())
+//        );
+//    }
 
     @PostMapping("multi")
     public void multiThreadRun(@RequestBody List<Devices> devices) {

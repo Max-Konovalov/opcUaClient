@@ -9,6 +9,7 @@ import lombok.Setter;
 import org.hibernate.annotations.Type;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 
 @Getter
@@ -16,13 +17,14 @@ import java.sql.Timestamp;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@Table(name = "devices_data")
 public class DeviceData {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "received_time", nullable = false)
-    private Timestamp receivedTime;
+    private LocalDateTime receivedTime;
 
     @ManyToOne
     @JoinColumn(name = "device_id", referencedColumnName = "id", nullable = false)
@@ -32,4 +34,5 @@ public class DeviceData {
     @Column(columnDefinition = "jsonb")
     @Type(JsonType.class)
     private String receivedData;
+
 }

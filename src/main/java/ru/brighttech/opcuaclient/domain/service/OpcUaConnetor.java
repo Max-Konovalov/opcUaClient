@@ -1,6 +1,7 @@
 package ru.brighttech.opcuaclient.domain.service;
 
-import lombok.Data;
+
+import lombok.RequiredArgsConstructor;
 import org.eclipse.milo.opcua.sdk.client.AddressSpace;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
@@ -17,25 +18,22 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadResponse;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
 import org.springframework.stereotype.Component;
-import ru.brighttech.opcuaclient.domain.persistence.entity.DeviceOld;
+import ru.brighttech.opcuaclient.domain.persistence.entity.Device;
+import ru.brighttech.opcuaclient.domain.persistence.entity.DeviceData;
+import ru.brighttech.opcuaclient.domain.persistence.repository.DeviceDataRepo;
 import ru.brighttech.opcuaclient.domain.persistence.repository.DeviceRepo;
-import ru.brighttech.opcuaclient.web.payload.DataRequest;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @Component
+@RequiredArgsConstructor
 public class OpcUaConnetor {
 
-    private DeviceRepo deviceRepo;
+    private final DeviceRepo deviceRepo;
+    private final DeviceDataRepo deviceDataRepo;
 
-    public OpcUaConnetor(DeviceRepo deviceRepo) {
-        this.deviceRepo = deviceRepo;
-    }
 
     public void showInnerNodes(OpcUaClient client, UaNode node, String inner) throws Exception {
             AttributeId attributeId = AttributeId.Value;
@@ -137,16 +135,54 @@ public class OpcUaConnetor {
 
         data.forEach( x -> nodeIdList.add(new NodeId(namespace, x)));
 
-        System.out.println(nodeIdList);
+//        System.out.println(nodeIdList);
 //
 
         List<ReadValueId> nodesToRead = new ArrayList<>();
-        nodeIdList.forEach( x -> nodesToRead.add(new ReadValueId(x, AttributeId.Value.uid(), null, null)));
-        CompletableFuture<ReadResponse> completableFuture = client.read(0, TimestampsToReturn.Server, nodesToRead);
+        nodeIdList.forEach( x -> nodesToRead.add(new ReadValueId(
+                x,
+                AttributeId.Value.uid(),
+                null,
+                null
+        )));
+        CompletableFuture<ReadResponse> completableFuture = client.read(
+                0,
+                TimestampsToReturn.Server,
+                nodesToRead
+        );
         ReadResponse future = completableFuture.get();
         System.out.println("_____\n");
-        Arrays.stream(Arrays.stream(future.getResults()).toArray()).toList().forEach(System.out::println);
 
+//        System.out.println(Arrays.toString(future.getResults()));
+
+        String forDb = "{ ";
+        for (int i = 0; i < data.size(); i++) {
+            String[] paramNameList = data.get(i).split("\\.");
+            System.out.println(
+                    paramNameList[paramNameList.length -1]
+                            .substring(
+                                    1,
+                                    paramNameList[paramNameList.length -1]
+                                            .length() - 1)
+            );
+            String opcParam = Arrays.stream(future.getResults()).toList().get(i).getValue().getValue().toString();
+            if (i == data.size() - 1) {
+                forDb+= paramNameList[paramNameList.length -1] + ": \"" + opcParam + "\"";
+                break;
+            }
+            forDb+= paramNameList[paramNameList.length -1] + " : \"" + opcParam + "\", ";
+        }
+        forDb+=" }";
+
+        System.out.println(forDb);
+
+        Device device = deviceRepo.getReferenceById(3);
+        deviceDataRepo.save(new DeviceData(
+                null,
+                LocalDateTime.now(),
+                device,
+                forDb
+                ));
     }
 
 }

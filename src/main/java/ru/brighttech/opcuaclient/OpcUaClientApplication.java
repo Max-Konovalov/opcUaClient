@@ -10,4 +10,5 @@ public class OpcUaClientApplication {
         SpringApplication.run(OpcUaClientApplication.class, args);
     }
 
+
 }

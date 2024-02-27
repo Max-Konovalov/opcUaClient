@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import ru.brighttech.opcuaclient.domain.persistence.entity.Device;
 import ru.brighttech.opcuaclient.domain.persistence.entity.DeviceOld;
 import ru.brighttech.opcuaclient.domain.persistence.repository.DeviceRepo;
 import ru.brighttech.opcuaclient.domain.service.OpcUaConnetor;
@@ -32,15 +33,13 @@ public class DeviceController {
     @Autowired
     private DeviceRepo deviceRepo;
     @GetMapping
-    public ResponseEntity<List<DeviceOld>> getDeviceList() {
+    public ResponseEntity<List<Device>> getDeviceList() {
         return ResponseEntity.ok().body(deviceRepo.findAll());
     }
 
     @PostMapping(value="/getData")
     public void getDeviceData(@RequestBody DataRequest data) throws Exception {
         opcUaConnetor.myConnector(data.getNamespace(), data.getAddress());
-
-        System.out.println("\"PLANT CH STATUS\".\"CH02\".\"ACT_CH_ENG\"");
     }
 
 }
