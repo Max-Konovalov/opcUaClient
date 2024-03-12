@@ -56,6 +56,7 @@ public class MainController {
     public void multiThreadRun(@RequestBody List<Devices> devices) {
         ExecutorService service = Executors.newFixedThreadPool(16);
 
+//        System.out.println("\"PLANT CH STATUS\".\"CH10\".\"ACT_CH_ENG\"");
         for (Devices device : devices) {
             service.execute(() -> {
                 try {

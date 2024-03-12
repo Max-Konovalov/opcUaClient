@@ -42,10 +42,8 @@ public class Device {
     @JoinColumn(name = "territory_id")
     private Territory territory;
 
-    private boolean isDeactivated;
-
     @Column(name = "is_deactivated", nullable = false)
-    private Boolean isDeactivated1 = false;
+    private boolean isDeactivated;
 
     @Column(name = "data")
     @JdbcTypeCode(SqlTypes.JSON)

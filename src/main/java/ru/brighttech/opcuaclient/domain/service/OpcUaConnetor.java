@@ -29,9 +29,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+
 
 @Component
 @RequiredArgsConstructor
@@ -40,6 +41,7 @@ public class OpcUaConnetor {
 
     private final DeviceRepo deviceRepo;
     private final DeviceDataRepo deviceDataRepo;
+    private final ExecutorService executorService;
 
 
     public void showInnerNodes(OpcUaClient client, UaNode node, String inner) throws Exception {
@@ -124,33 +126,43 @@ public class OpcUaConnetor {
 
     @Scheduled(fixedRate = 5000)
     public void myConnector() throws Exception {
-        Device device = deviceRepo.findById(3).get();
-        Map<String, Object> deviceData = device.getData();
-        List<String> data = new ArrayList<>();
-        for (Map.Entry<String, Object> entry : deviceData.entrySet()) {
-            data.add(entry.getValue().toString());
+        List<Integer> myList = new ArrayList<>(Arrays.asList(3, 12));
+
+        for (int elem : myList
+             ) {
+            System.out.println(elem);
+            Device device = deviceRepo.findById(elem).get();
+            List<String> data = (List<String>) device.getData().get("address");
+
+            executorService.execute(() -> {
+                try {
+                    readNewDevice(device.getIp(), data, elem);
+                } catch (UaException | InterruptedException | ExecutionException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
         }
+    }
+
+    public void readNewDevice(String ip, List<String> data, int elem) throws UaException, ExecutionException, InterruptedException {
 
         int namespace = 3;
-        String endpointUrl = "opc.tcp://10.103.36.28:4840";
-        OpcUaClient client = OpcUaClient.create(
-                endpointUrl,
-                endpoints ->
-                        endpoints.stream()
-                                .filter(e -> e.getSecurityPolicyUri().equals(SecurityPolicy.None.getUri()))
-                                .findFirst(),
-                OpcUaClientConfigBuilder::build
-        );
-        client.connect().get();
-
-        System.out.println("connected");
+        String endpointUrl = "opc.tcp://" + ip + ":4840";
+        OpcUaClient client = null;
+            client = OpcUaClient.create(
+                    endpointUrl,
+                    endpoints ->
+                            endpoints.stream()
+                                    .filter(e -> e.getSecurityPolicyUri().equals(SecurityPolicy.None.getUri()))
+                                    .findFirst(),
+                    OpcUaClientConfigBuilder::build
+            );
+            client.connect().get();
 
         List<NodeId> nodeIdList = new ArrayList<>();
 
         data.forEach( x -> nodeIdList.add(new NodeId(namespace, x)));
-
-//        System.out.println(nodeIdList);
-//
 
         List<ReadValueId> nodesToRead = new ArrayList<>();
         nodeIdList.forEach( x -> nodesToRead.add(new ReadValueId(
@@ -159,42 +171,52 @@ public class OpcUaConnetor {
                 null,
                 null
         )));
-        saveDataToDatabase(data, client, nodesToRead);
+        saveDataToDatabase(data, client, nodesToRead, elem);
+
     }
 
-    private void saveDataToDatabase(List<String> data, OpcUaClient client, List<ReadValueId> nodesToRead) throws InterruptedException, ExecutionException {
+    private void saveDataToDatabase(List<String> data, OpcUaClient client, List<ReadValueId> nodesToRead, int elem) throws InterruptedException, ExecutionException {
         CompletableFuture<ReadResponse> completableFuture = client.read(
                 0,
                 TimestampsToReturn.Server,
                 nodesToRead
         );
         ReadResponse future = completableFuture.get();
-        System.out.println("_____\n");
-
-//        System.out.println(Arrays.toString(future.getResults()));
 
         String forDb = "{ ";
         for (int i = 0; i < data.size(); i++) {
             String[] paramNameList = data.get(i).split("\\.");
-            System.out.println(
-                    paramNameList[paramNameList.length -1]
-                            .substring(
-                                    1,
-                                    paramNameList[paramNameList.length -1]
-                                            .length() - 1)
-            );
+
+            String opcParamName = "\"" + paramNameList[paramNameList.length -1].substring(
+                            1,
+                            paramNameList[paramNameList.length -1].length() - 1);
+
+            if (paramNameList.length > 1) {
+                opcParamName += "." + paramNameList[paramNameList.length - 2]
+                        .substring(
+                                1,
+                                paramNameList[paramNameList.length - 2]
+                                        .length() - 1);
+            }
+            opcParamName+= "\"";
+
             String opcParam = Arrays.stream(future.getResults()).toList().get(i).getValue().getValue().toString();
             if (i == data.size() - 1) {
-                forDb+= paramNameList[paramNameList.length -1] + ": \"" + opcParam + "\"";
+                forDb+= opcParamName + ": \"" + opcParam + "\"";
                 break;
             }
-            forDb+= paramNameList[paramNameList.length -1] + " : \"" + opcParam + "\", ";
+            forDb+= opcParamName + " : \"" + opcParam + "\", ";
         }
         forDb+=" }";
 
         System.out.println(forDb);
 
-        Device device = deviceRepo.getReferenceById(3);
+        System.out.printf("Данные за %s загружены. \n", LocalDateTime.now());
+
+        Device device = deviceRepo.getReferenceById(elem);
+
+        System.out.println(device.getName());
+
         deviceDataRepo.save(new DeviceData(
                 null,
                 LocalDateTime.now(),
@@ -203,5 +225,4 @@ public class OpcUaConnetor {
                 ));
         client.disconnect();
     }
-
 }
